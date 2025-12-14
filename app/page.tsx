@@ -9,6 +9,8 @@ type Screen = {
   requiresAcknowledgment?: boolean;
   autoAdvance?: boolean;
   autoAdvanceDelay?: number;
+  isAd?: boolean;
+  adId?: number;
 };
 
 const screens: Screen[] = [
@@ -67,6 +69,14 @@ const screens: Screen[] = [
     autoAdvanceDelay: 25000 // 25 seconds
   },
   {
+    content: [],
+    isAd: true,
+    adId: 1,
+    requiresAcknowledgment: false,
+    autoAdvance: true,
+    autoAdvanceDelay: 30000 // 30 seconds unskippable ad
+  },
+  {
     content: [
       "You are beginning to feel drowsy..."
     ],
@@ -89,6 +99,14 @@ const screens: Screen[] = [
     requiresAcknowledgment: false,
     autoAdvance: true,
     autoAdvanceDelay: 16000 // 16 seconds
+  },
+  {
+    content: [],
+    isAd: true,
+    adId: 2,
+    requiresAcknowledgment: false,
+    autoAdvance: true,
+    autoAdvanceDelay: 30000 // 30 seconds unskippable ad
   },
   {
     content: [
@@ -127,6 +145,8 @@ export default function Home() {
   const [acknowledged, setAcknowledged] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [administrationStartTime, setAdministrationStartTime] = useState<Date | null>(null);
+  const [adCountdown, setAdCountdown] = useState(30);
+  const [showCannotSkip, setShowCannotSkip] = useState(false);
 
   const currentScreen = screens[currentIndex];
   const isLastScreen = currentIndex >= screens.length - 1;
@@ -144,6 +164,29 @@ export default function Home() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (currentScreen.isAd && adCountdown > 0) {
+      const timer = setInterval(() => {
+        setAdCountdown((prev) => {
+          if (prev <= 1) {
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    } else if (currentScreen.isAd && adCountdown === 0) {
+      setAdCountdown(30);
+    }
+  }, [currentScreen.isAd, adCountdown]);
+
+  useEffect(() => {
+    if (currentScreen.isAd) {
+      setAdCountdown(30);
+      setShowCannotSkip(false);
+    }
+  }, [currentIndex]);
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', { 
@@ -234,6 +277,112 @@ export default function Home() {
     if (currentIndex < 9) return 'ADMINISTERING';
     return 'IN PROGRESS';
   };
+
+  if (currentScreen.isAd) {
+    return (
+      <div
+        className="flex min-h-screen flex-col items-center justify-center relative"
+        style={{
+          backgroundColor: '#0a0a0a',
+          fontFamily: 'Arial, sans-serif'
+        }}
+      >
+        <div 
+          className="absolute inset-0 flex items-center justify-center"
+          style={{
+            opacity: fadeOut ? 0 : 1,
+            transition: `opacity ${FADE_DURATION}ms linear`
+          }}
+        >
+          <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4 overflow-hidden relative" style={{ backgroundColor: '#ffffff' }}>
+            <button
+              onClick={() => setShowCannotSkip(true)}
+              className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-full transition-colors"
+              style={{ zIndex: 10 }}
+            >
+              <span className="text-xl font-bold">×</span>
+            </button>
+            {showCannotSkip && (
+              <div className="absolute top-16 right-4 z-20">
+                <div className="bg-red-600 text-white p-4 rounded-lg shadow-lg border-2 border-red-700">
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="text-sm font-bold">You cannot skip the ad</p>
+                    <button
+                      onClick={() => setShowCannotSkip(false)}
+                      className="text-white hover:text-gray-200 font-bold text-lg"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="bg-red-600 px-4 py-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-white text-sm font-bold">AD</span>
+                <span className="text-white text-xs">Sponsored</span>
+              </div>
+              <div className="text-white text-sm font-bold">{adCountdown}</div>
+            </div>
+            <div className="p-8">
+              <div className="mb-4">
+                {currentScreen.adId === 1 ? (
+                  <>
+                    <h2 className="text-3xl font-bold mb-2" style={{ color: '#1a1a1a' }}>Serenex - Find Your Peace</h2>
+                    <p className="text-lg mb-4" style={{ color: '#4a4a4a' }}>
+                      Don't let depression control your life. Serenex helps millions find relief from symptoms of depression.
+                    </p>
+                    <div className="bg-blue-50 p-4 rounded mb-4" style={{ backgroundColor: '#e3f2fd' }}>
+                      <p className="text-sm mb-2" style={{ color: '#1976d2' }}>
+                        <strong>Ask your doctor about Serenex</strong>
+                      </p>
+                      <p className="text-xs" style={{ color: '#666' }}>
+                        Common side effects may include nausea, dizziness, and sleep disturbances. 
+                        May increase suicidal thoughts in young adults. Consult your healthcare provider.
+                      </p>
+                    </div>
+                    <button 
+                      className="bg-blue-600 text-white px-6 py-3 rounded font-semibold hover:bg-blue-700 transition-colors"
+                      style={{ backgroundColor: '#1976d2' }}
+                      onClick={(e) => e.preventDefault()}
+                    >
+                      Learn More
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-3xl font-bold mb-2" style={{ color: '#1a1a1a' }}>Zephyril - Reclaim Your Life</h2>
+                    <p className="text-lg mb-4" style={{ color: '#4a4a4a' }}>
+                      Break free from the weight of depression. Zephyril offers a new path to emotional wellness and mental clarity.
+                    </p>
+                    <div className="bg-purple-50 p-4 rounded mb-4" style={{ backgroundColor: '#f3e5f5' }}>
+                      <p className="text-sm mb-2" style={{ color: '#7b1fa2' }}>
+                        <strong>Talk to your healthcare provider about Zephyril</strong>
+                      </p>
+                      <p className="text-xs" style={{ color: '#666' }}>
+                        Side effects may include dry mouth, fatigue, and changes in appetite. 
+                        Serious side effects can occur. Not for use in children under 18. See full prescribing information.
+                      </p>
+                    </div>
+                    <button 
+                      className="bg-purple-600 text-white px-6 py-3 rounded font-semibold hover:bg-purple-700 transition-colors"
+                      style={{ backgroundColor: '#7b1fa2' }}
+                      onClick={(e) => e.preventDefault()}
+                    >
+                      Get Started
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="absolute bottom-4 left-4 text-white text-sm opacity-70">
+          Ad cannot be skipped
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
