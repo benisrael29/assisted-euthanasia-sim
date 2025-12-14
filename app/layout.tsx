@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Assisted Euthanasia",
-  description: "An interactive artwork exploring the intersection of technology, mortality, and commercial interruption",
+  description: "An interactive artwork examining how commercial content delivery systems intrude upon moments of consent, mortality, and care",
 };
 
 export default function RootLayout({

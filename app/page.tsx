@@ -17,48 +17,49 @@ type Screen = {
 
 const screens: Screen[] = [
   {
-    content: "You have requested to end your life.",
+    content: "Termination request received and logged.",
     requiresAcknowledgment: false,
     autoAdvance: true,
     autoAdvanceDelay: 8000
   },
   {
-    content: "This program will guide you through the process of ending your life.",
+    content: "This interface will guide you through the voluntary termination procedure.",
     requiresAcknowledgment: false,
     autoAdvance: true,
     autoAdvanceDelay: 8000
   },
   {
-    content: "The procedure involves the administration of Nembutal, a drug that will induce deep sleep followed by respiratory arrest.",
+    content: "The procedure involves intravenous administration of Nembutal (pentobarbital sodium). This will induce unconsciousness followed by respiratory depression and cardiac arrest.",
     requiresAcknowledgment: false,
     autoAdvance: true,
     autoAdvanceDelay: 15000
   },
   {
-    content: "An infusion pump will administer 2000mg of Nembutal over 5 mins. You may experience a slight bitter taste in your mouth as the drug is administered.",
+    content: "An automated infusion pump will deliver 2000mg of Nembutal over 5 minutes. You may experience a bitter taste during administration.",
     requiresAcknowledgment: false,
     autoAdvance: true,
     autoAdvanceDelay: 8000
   },
   {
-    content: "Once started, the process is irreversible. You will die.",
+    content: "Once initiated, this process cannot be reversed. Death will occur.",
     requiresAcknowledgment: false,
     autoAdvance: true,
     autoAdvanceDelay: 6000
   },
   {
-    content: "I acknowledge that this procedure will kill me.",
+    content: "I acknowledge that this procedure will result in my death.",
     requiresAcknowledgment: true,
     autoAdvance: false
   },
   {
-    content: "After giving acknowledgement, you will be given a lethal dose of Nembutal and die.",
+    content: "Upon acknowledgment, lethal dose administration will commence.",
     requiresAcknowledgment: true,
     autoAdvance: false
-  },  
+  },
   {
     content: [
-      "The medication is being administered now."
+      "Administration in progress.",
+      "Service continuity maintained per protocol."
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
@@ -74,7 +75,7 @@ const screens: Screen[] = [
   },
   {
     content: [
-      "You are beginning to feel drowsy..."
+      "Sedation onset detected."
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
@@ -82,7 +83,7 @@ const screens: Screen[] = [
   },
   {
     content: [
-      "Your breathing is slowing..."
+      "Respiratory rate decreasing."
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
@@ -90,7 +91,7 @@ const screens: Screen[] = [
   },
   {
     content: [
-      "Your consciousness is fading..."
+      "Consciousness level: declining."
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
@@ -106,7 +107,7 @@ const screens: Screen[] = [
   },
   {
     content: [
-      "You are falling into a deep sleep..."
+      "Unconsciousness threshold reached."
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
@@ -114,7 +115,7 @@ const screens: Screen[] = [
   },
   {
     content: [
-      "This is the last thing you will experience."
+      "Final conscious experience."
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
@@ -122,7 +123,7 @@ const screens: Screen[] = [
   },
   {
     content: [
-      "Goodbye."
+      "Procedure complete."
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
@@ -514,7 +515,7 @@ export default function Home() {
 
   if (isLastScreen) {
     return (
-      <div className="flex min-h-screen flex-col" style={{ backgroundColor: '#0a0a0a', color: '#b0b0b0', fontFamily: 'Arial, sans-serif' }}>
+      <div className="flex flex-col" style={{ backgroundColor: '#0a0a0a', color: '#b0b0b0', fontFamily: 'Arial, sans-serif', height: '100vh', overflow: 'hidden' }}>
         <div className="border-b px-6 py-4" style={{ borderColor: '#4a4a4a', backgroundColor: '#1a1a1a' }}>
           <div className="flex items-center justify-between">
             <div className="text-lg" style={{ color: '#b0b0b0' }}>
@@ -522,7 +523,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center" style={{ height: 'calc(100vh - 73px)' }}>
           <div className="text-center">
             <div className="text-7xl font-bold mb-4" style={{ color: '#ffffff' }}>PROCEDURE COMPLETE</div>
           </div>
@@ -545,16 +546,17 @@ export default function Home() {
   if (currentScreen.isAd) {
     return (
       <div
-        className="flex min-h-screen flex-col items-center justify-center relative"
+        className="flex flex-col items-center justify-center relative"
         style={{
           backgroundColor: '#0a0a0a',
           fontFamily: 'Arial, sans-serif',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          height: '100vh'
         }}
       >
         <audio 
           ref={serenexAudioRef} 
-          src="/ad_1_serenex.mp3" 
+          src="/ad_serenex.mp3" 
           preload="auto"
           style={{ display: 'none' }}
         />
@@ -595,7 +597,7 @@ export default function Home() {
               <div className="absolute top-16 right-4 z-20">
                 <div className="bg-red-600 text-white p-4 rounded-lg shadow-lg border-2 border-red-700">
                   <div className="flex items-center justify-between gap-4">
-                    <p className="text-sm font-bold">You cannot skip the ad</p>
+                    <p className="text-sm font-bold">Content delivery cannot be interrupted. User retention protocol active.</p>
                     <button
                       onClick={() => setShowCannotSkip(false)}
                       className="text-white hover:text-gray-200 font-bold text-lg"
@@ -608,8 +610,8 @@ export default function Home() {
             )}
             <div className="bg-red-600 px-4 py-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-white text-sm font-bold">AD</span>
-                <span className="text-white text-xs">Sponsored</span>
+                <span className="text-white text-sm font-bold">CONTENT DELIVERY</span>
+                <span className="text-white text-xs">Sponsor Placement</span>
               </div>
               <div className="text-white text-sm font-bold">{adCountdown}</div>
             </div>
@@ -667,7 +669,7 @@ export default function Home() {
           </div>
         </div>
         <div className="absolute bottom-4 left-4 text-white text-sm opacity-70">
-          Ad cannot be skipped
+          Mandatory content allocation. Skip function disabled.
         </div>
       </div>
     );
@@ -675,17 +677,19 @@ export default function Home() {
 
   return (
     <div
-      className="flex min-h-screen flex-col"
+      className="flex flex-col"
       style={{
         backgroundColor: '#0a0a0a',
         color: '#b0b0b0',
-        fontFamily: 'Arial, sans-serif'
+        fontFamily: 'Arial, sans-serif',
+        height: '100vh',
+        overflow: 'hidden'
       }}
     >
       {/* Hidden audio elements always rendered for proper ref access */}
       <audio 
         ref={serenexAudioRef} 
-        src="/ad_1_serenex.mp3" 
+        src="/ad_serenex.mp3" 
         preload="auto"
         style={{ display: 'none' }}
         onError={(e) => console.error('Serenex audio error:', e)}
@@ -716,7 +720,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-12 py-16 relative">
+      <div className="flex-1 flex items-center justify-center px-12 py-16 relative" style={{ height: 'calc(100vh - 73px)', overflow: 'hidden' }}>
         <div 
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -736,10 +740,10 @@ export default function Home() {
           />
         )}
         <div className="max-w-4xl w-full relative z-10">
-          <div className="border-2 shadow-lg" style={{ backgroundColor: '#1a1a1a', borderColor: '#4a4a4a' }}>
-            <div className="p-12">
+          <div className="border-2 shadow-lg" style={{ backgroundColor: '#1a1a1a', borderColor: '#4a4a4a', height: '500px', display: 'flex', flexDirection: 'column' }}>
+            <div className="p-12 flex-1 flex items-center">
               <div 
-                className="space-y-6"
+                className="space-y-6 w-full"
                 style={{
                   opacity: fadeOut ? 0 : 1,
                   transition: `opacity ${FADE_DURATION}ms linear`
@@ -758,10 +762,13 @@ export default function Home() {
                       color: '#ffffff',
                       opacity: visibleLines.includes(idx) ? 1 : 0,
                       transform: visibleLines.includes(idx) ? 'translateY(0)' : 'translateY(10px)',
-                      transition: 'opacity 0.6s ease, transform 0.6s ease'
+                      transition: 'opacity 0.6s ease, transform 0.6s ease',
+                      position: 'relative',
+                      minHeight: line === "" ? '2rem' : '1.8em',
+                      height: line === "" ? '2rem' : 'auto'
                     }}
                   >
-                    {line}
+                    {line || '\u00A0'}
                   </div>
                 ))}
               </div>
