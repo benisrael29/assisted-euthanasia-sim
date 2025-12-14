@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 const FADE_DURATION = 1000;
-const HOLD_DURATION = 2000;
 const LINE_REVEAL_DELAY = 800;
 
 type Screen = {
@@ -146,8 +145,6 @@ export default function Home() {
   const [showCannotSkip, setShowCannotSkip] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [visibleLines, setVisibleLines] = useState<number[]>([]);
-  const [holdProgress, setHoldProgress] = useState(0);
-  const [isHolding, setIsHolding] = useState(false);
   const [adFlash, setAdFlash] = useState(false);
   const [ambienceIntensity, setAmbienceIntensity] = useState(0);
   const serenexAudioRef = useRef<HTMLAudioElement>(null);
@@ -156,7 +153,6 @@ export default function Home() {
   const ambienceOscRef = useRef<OscillatorNode | null>(null);
   const ambienceNoiseRef = useRef<AudioBufferSourceNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const holdIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const reducedMotion = useRef(false);
 
   useEffect(() => {
@@ -453,55 +449,18 @@ export default function Home() {
     return dose;
   };
 
-  const handleHoldStart = () => {
+  const handleAcknowledge = () => {
     if (acknowledged) return;
-    setIsHolding(true);
-    setHoldProgress(0);
-    
-    const startTime = Date.now();
-    holdIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(100, (elapsed / HOLD_DURATION) * 100);
-      setHoldProgress(progress);
-      
-      if (progress >= 100) {
-        if (holdIntervalRef.current) {
-          clearInterval(holdIntervalRef.current);
-          holdIntervalRef.current = null;
-        }
-        setAcknowledged(true);
-        setIsHolding(false);
-        setTimeout(() => {
-          setFadeOut(true);
-          setTimeout(() => {
-            setCurrentIndex(idx => idx + 1);
-            setFadeOut(false);
-            setAcknowledged(false);
-            setHoldProgress(0);
-          }, FADE_DURATION);
-        }, 500);
-      }
-    }, 16);
+    setAcknowledged(true);
+    setTimeout(() => {
+      setFadeOut(true);
+      setTimeout(() => {
+        setCurrentIndex(idx => idx + 1);
+        setFadeOut(false);
+        setAcknowledged(false);
+      }, FADE_DURATION);
+    }, 500);
   };
-
-  const handleHoldEnd = () => {
-    if (holdIntervalRef.current) {
-      clearInterval(holdIntervalRef.current);
-      holdIntervalRef.current = null;
-    }
-    setIsHolding(false);
-    if (!acknowledged) {
-      setHoldProgress(0);
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      if (holdIntervalRef.current) {
-        clearInterval(holdIntervalRef.current);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     if (currentScreen.autoAdvance && !currentScreen.requiresAcknowledgment && !fadeOut) {
@@ -790,29 +749,10 @@ export default function Home() {
 
       {currentScreen.requiresAcknowledgment && (
         <div className="fixed bottom-6 right-6 flex flex-col items-end gap-2" style={{ zIndex: 1000 }}>
-          {!acknowledged && (
-            <div 
-              className="text-sm uppercase tracking-wider px-4 py-2 rounded"
-              style={{
-                backgroundColor: '#2a2a2a',
-                color: '#ffffff',
-                border: '1px solid #4a4a4a',
-                fontFamily: 'Arial, sans-serif',
-                fontWeight: 'bold',
-                letterSpacing: '0.1em',
-                animation: !isHolding ? 'pulse 2s ease-in-out infinite' : 'none'
-              }}
-            >
-              HOLD TO ACKNOWLEDGE
-            </div>
-          )}
           <button
-            onMouseDown={handleHoldStart}
-            onMouseUp={handleHoldEnd}
-            onTouchStart={handleHoldStart}
-            onTouchEnd={handleHoldEnd}
+            onClick={handleAcknowledge}
             disabled={acknowledged}
-            className="py-3 px-6 text-base uppercase tracking-wider border-2 transition-all duration-200 relative overflow-hidden"
+            className="py-3 px-6 text-base uppercase tracking-wider border-2 transition-all duration-200"
             style={{
               fontFamily: 'Arial, sans-serif',
               letterSpacing: '0.05em',
@@ -821,8 +761,6 @@ export default function Home() {
               color: acknowledged ? '#6a6a6a' : '#ffffff',
               borderColor: acknowledged ? '#4a4a4a' : '#6a6a6a',
               cursor: acknowledged ? 'not-allowed' : 'pointer',
-              transform: isHolding && !reducedMotion.current ? `scale(${1 + Math.sin(Date.now() / 50) * 0.02})` : 'scale(1)',
-              transition: isHolding ? 'transform 0.05s linear' : 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
               if (!acknowledged) {
@@ -831,26 +769,13 @@ export default function Home() {
               }
             }}
             onMouseLeave={(e) => {
-              handleHoldEnd();
-              if (!acknowledged && !isHolding) {
+              if (!acknowledged) {
                 e.currentTarget.style.backgroundColor = '#3a3a3a';
                 e.currentTarget.style.borderColor = '#6a6a6a';
               }
             }}
           >
-            <div
-              className="absolute inset-0 bg-white opacity-20"
-              style={{
-                width: `${holdProgress}%`,
-                transition: holdProgress > 0 ? 'width 0.1s linear' : 'none'
-              }}
-            />
-            <span className="relative z-10">
-              {acknowledged ? 'ACKNOWLEDGED' : 'I Acknowledge That I Am Going To Die'}
-            </span>
-            {!acknowledged && (
-              <div className="absolute -bottom-1 left-0 right-0 h-1 bg-red-600" style={{ width: `${holdProgress}%` }} />
-            )}
+            {acknowledged ? 'ACKNOWLEDGED' : 'I Acknowledge That I Am Going To Die'}
           </button>
         </div>
       )}
