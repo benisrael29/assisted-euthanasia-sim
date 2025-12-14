@@ -52,7 +52,7 @@ const screens: Screen[] = [
     autoAdvance: false
   },
   {
-    content: "Upon acknowledgment, lethal dose administration will commence.",
+    content: "Upon acknowledgment, lethal dose administration will commence. YOU WILL DIE!",
     requiresAcknowledgment: true,
     autoAdvance: false
   },
