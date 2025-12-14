@@ -38,9 +38,15 @@ const screens: Screen[] = [
     requiresAcknowledgment: false,
     autoAdvance: true,
     autoAdvanceDelay: 8000
+  },  
+  {
+    content: "You will feel no pain and the process will be guided by this interface.",
+    requiresAcknowledgment: false,
+    autoAdvance: true,
+    autoAdvanceDelay: 8000
   },
   {
-    content: "Once initiated, this process cannot be reversed. Death will occur.",
+    content: "Once initiated, the process cannot be reversed. Death will occur.",
     requiresAcknowledgment: false,
     autoAdvance: true,
     autoAdvanceDelay: 6000
@@ -119,6 +125,14 @@ const screens: Screen[] = [
     requiresAcknowledgment: false,
     autoAdvance: true,
     autoAdvanceDelay: 16000 // 16 seconds
+  },
+  {
+    content: [],
+    isAd: true,
+    adId: 1,
+    requiresAcknowledgment: false,
+    autoAdvance: true,
+    autoAdvanceDelay: 30000 // 30 seconds unskippable ad
   },
   {
     content: [
