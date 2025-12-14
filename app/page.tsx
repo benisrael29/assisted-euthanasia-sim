@@ -242,7 +242,7 @@ export default function Home() {
         document.removeEventListener('keydown', handleUserInteraction);
         // Start ambience immediately after initialization
         if (currentIndex === 0 && !screens[0].isAd) {
-          const intensity = 0.1;
+          const intensity = 0.2;
           setAmbienceIntensity(intensity);
           updateAmbience(intensity, false);
         }
