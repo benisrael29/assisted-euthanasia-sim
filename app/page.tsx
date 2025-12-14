@@ -40,7 +40,7 @@ const screens: Screen[] = [
     autoAdvanceDelay: 8000
   },  
   {
-    content: "You will feel no pain and the process will be guided by this interface.",
+    content: "You will feel no pain and will be completely guided by this interface. You will not be alone.",
     requiresAcknowledgment: false,
     autoAdvance: true,
     autoAdvanceDelay: 8000
@@ -185,12 +185,23 @@ export default function Home() {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  const initAmbience = useCallback(() => {
-    if (audioContextRef.current) return;
+  const initAmbience = useCallback(async () => {
+    if (audioContextRef.current) {
+      // Resume if suspended
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+      return;
+    }
     
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       audioContextRef.current = ctx;
+      
+      // Resume if suspended (browser autoplay policy)
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
       
       const gainNode = ctx.createGain();
       gainNode.gain.value = 0;
@@ -201,7 +212,7 @@ export default function Home() {
       osc.type = 'sine';
       osc.frequency.value = 40;
       osc.connect(gainNode);
-      osc.start();
+      osc.start(0);
       ambienceOscRef.current = osc;
       
       const bufferSize = ctx.sampleRate * 2;
@@ -219,7 +230,7 @@ export default function Home() {
       filter.frequency.value = 200;
       noise.connect(filter);
       filter.connect(gainNode);
-      noise.start();
+      noise.start(0);
       ambienceNoiseRef.current = noise;
     } catch (e) {
       console.log('Web Audio not available:', e);
@@ -249,9 +260,9 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const handleUserInteraction = () => {
+    const handleUserInteraction = async () => {
       if (!audioEnabled) {
-        initAmbience();
+        await initAmbience();
         setAudioEnabled(true);
         document.removeEventListener('click', handleUserInteraction);
         document.removeEventListener('touchstart', handleUserInteraction);
@@ -339,9 +350,16 @@ export default function Home() {
       setTimeout(() => setAdFlash(false), 200);
       updateAmbience(0, true);
     } else {
-      const intensity = Math.min(1, Math.max(0.1, currentIndex / screens.length));
+      const intensity = Math.min(1, Math.max(0.2, currentIndex / screens.length));
       setAmbienceIntensity(intensity);
-      updateAmbience(intensity, false);
+      // Ensure audio context is resumed before updating
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume().then(() => {
+          updateAmbience(intensity, false);
+        });
+      } else {
+        updateAmbience(intensity, false);
+      }
     }
   }, [currentIndex, currentScreen.isAd, updateAmbience]);
 
