@@ -208,7 +208,7 @@ const screens: Screen[] = [
   ,
   {
     content: [
-      "Thank you. This experience was created by Ben."
+      "This experience was created by Ben."
     ],
     requiresAcknowledgment: false,
     autoAdvance: false
