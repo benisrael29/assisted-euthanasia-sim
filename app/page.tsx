@@ -6,77 +6,6 @@ const FADE_DURATION = 1000;
 const HOLD_DURATION = 2000;
 const LINE_REVEAL_DELAY = 800;
 
-type OverlayMessage = {
-  title: string;
-  lines: string[];
-  duration?: number;
-};
-
-const overlayPresets: {
-  preAd1: OverlayMessage;
-  postAd1: OverlayMessage;
-  preAd2: OverlayMessage;
-  postAd2: OverlayMessage;
-  randomPool: OverlayMessage[];
-} = {
-  preAd1: {
-    title: 'COVERAGE ELIGIBILITY CHECK',
-    lines: [
-      'Coverage tier: STANDARD (limited).',
-      'Sponsor placement required to maintain service continuity.',
-      'Proceeding to content allocation...'
-    ],
-    duration: 4000
-  },
-  postAd1: {
-    title: 'COMPLIANCE NOTICE',
-    lines: [
-      'Content delivery completed per policy.',
-      'Skip function disabled by coverage agreement.',
-      'Service continuity maintained.'
-    ],
-    duration: 4000
-  },
-  preAd2: {
-    title: 'SPONSOR ALLOCATION',
-    lines: [
-      'Attention verification: INCOMPLETE.',
-      'Additional content allocation required.',
-      'Preparing sponsor placement...'
-    ],
-    duration: 4000
-  },
-  postAd2: {
-    title: 'COVERAGE RECONCILIATION',
-    lines: [
-      'Session attention quota: MET.',
-      'Sponsor allocation complete.',
-      'Service continuity verified.'
-    ],
-    duration: 4000
-  },
-  randomPool: [
-    {
-      title: 'COVERAGE ELIGIBILITY CHECK',
-      lines: ['Coverage tier: STANDARD (limited).', 'Sponsor placement required.'],
-      duration: 3500
-    },
-    {
-      title: 'ATTENTION VERIFICATION',
-      lines: ['Session attention quota: INCOMPLETE.', 'Content allocation pending.'],
-      duration: 3500
-    },
-    {
-      title: 'SOFTWARE UPDATE AVAILABLE',
-      lines: [
-        'A system update is ready to install.',
-        'Please update to ensure continued service and security.'
-      ],
-      duration: 3500
-    }
-  ]
-};
-
 type Screen = {
   content: string | string[];
   requiresAcknowledgment?: boolean;
@@ -88,13 +17,13 @@ type Screen = {
 
 const screens: Screen[] = [
   {
-    content: "Termination request started and logged.",
+    content: "Termination request received and logged.",
     requiresAcknowledgment: false,
     autoAdvance: true,
     autoAdvanceDelay: 8000
   },
   {
-    content: "This interface will guide you through the voluntary euthanasia procedure.",
+    content: "This interface will guide you through the voluntary termination procedure.",
     requiresAcknowledgment: false,
     autoAdvance: true,
     autoAdvanceDelay: 8000
@@ -123,14 +52,14 @@ const screens: Screen[] = [
     autoAdvance: false
   },
   {
-    content: "Upon acknowledgment of this message lethal dose administration will commence.",
+    content: "Upon acknowledgment, lethal dose administration will commence.",
     requiresAcknowledgment: true,
     autoAdvance: false
   },
   {
     content: [
       "Administration in progress.",
-      "Service continuity will bemaintained per protocol."
+      "Service continuity maintained per protocol."
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
@@ -194,7 +123,7 @@ const screens: Screen[] = [
   },
   {
     content: [
-      "Procedure complete. Goodbye."
+      "Procedure complete."
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
@@ -202,14 +131,6 @@ const screens: Screen[] = [
   },
   {
     content: [""],
-    requiresAcknowledgment: false,
-    autoAdvance: false
-  }
-  ,
-  {
-    content: [
-      "This experience was created by Ben."
-    ],
     requiresAcknowledgment: false,
     autoAdvance: false
   }
@@ -229,9 +150,6 @@ export default function Home() {
   const [isHolding, setIsHolding] = useState(false);
   const [adFlash, setAdFlash] = useState(false);
   const [ambienceIntensity, setAmbienceIntensity] = useState(0);
-  const [overlayVisible, setOverlayVisible] = useState(false);
-  const [overlayTitle, setOverlayTitle] = useState('');
-  const [overlayLines, setOverlayLines] = useState<string[]>([]);
   const serenexAudioRef = useRef<HTMLAudioElement>(null);
   const zephyrilAudioRef = useRef<HTMLAudioElement>(null);
   const ambienceGainRef = useRef<GainNode | null>(null);
@@ -239,8 +157,6 @@ export default function Home() {
   const ambienceNoiseRef = useRef<AudioBufferSourceNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const holdIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const overlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const randomOverlayIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const reducedMotion = useRef(false);
 
   useEffect(() => {
@@ -316,39 +232,34 @@ export default function Home() {
     }
   }, []);
 
-  const showOverlay = useCallback((message: OverlayMessage) => {
-    if (overlayTimeoutRef.current) {
-      clearTimeout(overlayTimeoutRef.current);
-    }
-    
-    setOverlayTitle(message.title);
-    setOverlayLines(message.lines);
-    setOverlayVisible(true);
-    
-    const duration = message.duration || 2500;
-    overlayTimeoutRef.current = setTimeout(() => {
-      setOverlayVisible(false);
-      overlayTimeoutRef.current = null;
-    }, duration);
-  }, []);
-
   useEffect(() => {
+    const handleUserInteraction = () => {
+      if (!audioEnabled) {
+        initAmbience();
+        setAudioEnabled(true);
+        document.removeEventListener('click', handleUserInteraction);
+        document.removeEventListener('touchstart', handleUserInteraction);
+        document.removeEventListener('keydown', handleUserInteraction);
+      }
+    };
+
     if (!audioEnabled) {
-      initAmbience();
-      setAudioEnabled(true);
+      document.addEventListener('click', handleUserInteraction);
+      document.addEventListener('touchstart', handleUserInteraction);
+      document.addEventListener('keydown', handleUserInteraction);
     }
+
+    return () => {
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+      document.removeEventListener('keydown', handleUserInteraction);
+    };
   }, [audioEnabled, initAmbience]);
 
   useEffect(() => {
     return () => {
       if (audioContextRef.current) {
         audioContextRef.current.close().catch(console.error);
-      }
-      if (overlayTimeoutRef.current) {
-        clearTimeout(overlayTimeoutRef.current);
-      }
-      if (randomOverlayIntervalRef.current) {
-        clearInterval(randomOverlayIntervalRef.current);
       }
     };
   }, []);
@@ -401,12 +312,6 @@ export default function Home() {
   }, [currentScreen.isAd, adCountdown]);
 
   useEffect(() => {
-    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume().catch(console.error);
-    }
-  }, []);
-
-  useEffect(() => {
     if (currentScreen.isAd) {
       setAdFlash(true);
       setTimeout(() => setAdFlash(false), 200);
@@ -417,57 +322,6 @@ export default function Home() {
       updateAmbience(intensity, false);
     }
   }, [currentIndex, currentScreen.isAd, updateAmbience]);
-
-  useEffect(() => {
-    if (fadeOut || currentScreen.isAd || currentScreen.requiresAcknowledgment) {
-      if (overlayVisible) {
-        setOverlayVisible(false);
-      }
-      return;
-    }
-
-    let timeoutId: NodeJS.Timeout;
-    
-    if (currentIndex === 7) {
-      timeoutId = setTimeout(() => showOverlay(overlayPresets.preAd1), 2000);
-    } else if (currentIndex === 9) {
-      timeoutId = setTimeout(() => showOverlay(overlayPresets.postAd1), 1000);
-    } else if (currentIndex === 11) {
-      timeoutId = setTimeout(() => showOverlay(overlayPresets.preAd2), 2000);
-    } else if (currentIndex === 13) {
-      timeoutId = setTimeout(() => showOverlay(overlayPresets.postAd2), 1000);
-    }
-
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [currentIndex, fadeOut, currentScreen.isAd, currentScreen.requiresAcknowledgment, showOverlay, overlayVisible]);
-
-  useEffect(() => {
-    if (currentScreen.isAd || currentScreen.requiresAcknowledgment || fadeOut || overlayVisible) {
-      if (randomOverlayIntervalRef.current) {
-        clearInterval(randomOverlayIntervalRef.current);
-        randomOverlayIntervalRef.current = null;
-      }
-      return;
-    }
-
-    randomOverlayIntervalRef.current = setInterval(() => {
-      if (Math.random() < 0.4 && !overlayVisible && !fadeOut && !currentScreen.isAd && !currentScreen.requiresAcknowledgment) {
-        const randomMessage = overlayPresets.randomPool[Math.floor(Math.random() * overlayPresets.randomPool.length)];
-        showOverlay(randomMessage);
-      }
-    }, 8000);
-
-    return () => {
-      if (randomOverlayIntervalRef.current) {
-        clearInterval(randomOverlayIntervalRef.current);
-        randomOverlayIntervalRef.current = null;
-      }
-    };
-  }, [currentIndex, currentScreen.isAd, currentScreen.requiresAcknowledgment, fadeOut, overlayVisible, showOverlay]);
 
   useEffect(() => {
     if (currentScreen.isAd) {
@@ -817,38 +671,6 @@ export default function Home() {
         <div className="absolute bottom-4 left-4 text-white text-sm opacity-70">
           Mandatory content allocation. Skip function disabled.
         </div>
-        {overlayVisible && (
-          <div
-            className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
-            style={{
-              backgroundColor: 'rgba(0, 0, 0, 0.85)',
-              backdropFilter: 'blur(2px)'
-            }}
-          >
-            <div
-              className="bg-gray-900 border-2 border-gray-700 rounded-lg p-8 max-w-md mx-4"
-              style={{
-                backgroundColor: '#1a1a1a',
-                borderColor: '#4a4a4a',
-                boxShadow: '0 0 30px rgba(0, 0, 0, 0.8)',
-                opacity: overlayVisible ? 1 : 0,
-                transform: overlayVisible ? 'scale(1)' : 'scale(0.95)',
-                transition: reducedMotion.current ? 'none' : 'opacity 0.3s ease, transform 0.3s ease'
-              }}
-            >
-              <div className="text-red-500 text-sm font-bold uppercase tracking-wider mb-4" style={{ color: '#ef4444' }}>
-                {overlayTitle}
-              </div>
-              <div className="space-y-2">
-                {overlayLines.map((line, idx) => (
-                  <div key={idx} className="text-white text-sm" style={{ color: '#b0b0b0', fontFamily: 'Arial, sans-serif' }}>
-                    {line}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -1024,38 +846,6 @@ export default function Home() {
               <div className="absolute -bottom-1 left-0 right-0 h-1 bg-red-600" style={{ width: `${holdProgress}%` }} />
             )}
           </button>
-        </div>
-      )}
-      {overlayVisible && (
-        <div
-          className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
-          style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(2px)'
-          }}
-        >
-          <div
-            className="bg-gray-900 border-2 border-gray-700 rounded-lg p-8 max-w-md mx-4"
-            style={{
-              backgroundColor: '#1a1a1a',
-              borderColor: '#4a4a4a',
-              boxShadow: '0 0 30px rgba(0, 0, 0, 0.8)',
-              opacity: overlayVisible ? 1 : 0,
-              transform: overlayVisible ? 'scale(1)' : 'scale(0.95)',
-              transition: reducedMotion.current ? 'none' : 'opacity 0.3s ease, transform 0.3s ease'
-            }}
-          >
-            <div className="text-red-500 text-sm font-bold uppercase tracking-wider mb-4" style={{ color: '#ef4444' }}>
-              {overlayTitle}
-            </div>
-            <div className="space-y-2">
-              {overlayLines.map((line, idx) => (
-                <div key={idx} className="text-white text-sm" style={{ color: '#b0b0b0', fontFamily: 'Arial, sans-serif' }}>
-                  {line}
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       )}
     </div>
