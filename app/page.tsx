@@ -132,11 +132,11 @@ const screens: Screen[] = [
     adId: 1,
     requiresAcknowledgment: false,
     autoAdvance: true,
-    autoAdvanceDelay: 30000 // 30 seconds unskippable ad
+    autoAdvanceDelay: 15 // 30 seconds unskippable ad
   },
   {
     content: [
-      "Procedure complete. Goodbye."
+      "Thank you for using this service. See you soon."
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
@@ -147,11 +147,6 @@ const screens: Screen[] = [
     requiresAcknowledgment: false,
     autoAdvance: true,
     autoAdvanceDelay: 5000 // 5 seconds
-  },
-   {
-    content: ["This was created by Ben. Opinions are my own."],
-    requiresAcknowledgment: false,
-    autoAdvance: false
   }
 ];
 
@@ -529,6 +524,9 @@ export default function Home() {
         <div className="flex-1 flex items-center justify-center" style={{ height: 'calc(100vh - 73px)' }}>
           <div className="text-center">
             <div className="text-7xl font-bold mb-4" style={{ color: '#ffffff' }}>PROCEDURE COMPLETE</div>
+          <div className="mt-8 text-base text-gray-500" style={{ color: '#aaa', fontSize: '0.85rem' }}>
+            This was created by Ben. Opinions are my own.
+          </div>
           </div>
         </div>
       </div>
