@@ -16,13 +16,13 @@ const screens: Screen[] = [
     content: "You have requested to end your life.",
     requiresAcknowledgment: false,
     autoAdvance: true,
-    autoAdvanceDelay: 5000
+    autoAdvanceDelay: 8000
   },
   {
     content: "This program will guide you through the process of ending your life.",
     requiresAcknowledgment: false,
     autoAdvance: true,
-    autoAdvanceDelay: 5000
+    autoAdvanceDelay: 8000
   },
   {
     content: "The procedure involves the administration of Nembutal, a drug that will induce deep sleep followed by respiratory arrest.",
@@ -43,18 +43,18 @@ const screens: Screen[] = [
     autoAdvanceDelay: 6000
   },
   {
-    content: "The process is irreversible once it has started.",
+    content: "once started, the process is irreversible.",
     requiresAcknowledgment: false,
     autoAdvance: true,
     autoAdvanceDelay: 6000
   },
   {
-    content: "You understand that this procedure will result in your death.",
+    content: "You acknowledge that this procedure will kill you.",
     requiresAcknowledgment: true,
     autoAdvance: false
   },
   {
-    content: "After giving consent, you will be given a lethal dose of Nembutal.",
+    content: "After giving acknowledgement, you will be given a lethal dose of Nembutal and die.",
     requiresAcknowledgment: true,
     autoAdvance: false
   },  
@@ -64,7 +64,7 @@ const screens: Screen[] = [
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
-    autoAdvanceDelay: 12000
+    autoAdvanceDelay: 25000 // 25 seconds
   },
   {
     content: [
@@ -72,7 +72,7 @@ const screens: Screen[] = [
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
-    autoAdvanceDelay: 5000
+    autoAdvanceDelay: 12000 // 12 seconds
   },
   {
     content: [
@@ -80,7 +80,7 @@ const screens: Screen[] = [
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
-    autoAdvanceDelay: 5000
+    autoAdvanceDelay: 12000 // 12 seconds
   },
   {
     content: [
@@ -88,7 +88,7 @@ const screens: Screen[] = [
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
-    autoAdvanceDelay: 7000
+    autoAdvanceDelay: 16000 // 16 seconds
   },
   {
     content: [
@@ -96,7 +96,7 @@ const screens: Screen[] = [
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
-    autoAdvanceDelay: 8000
+    autoAdvanceDelay: 20000 // 20 seconds
   },
   {
     content: [
@@ -104,7 +104,7 @@ const screens: Screen[] = [
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
-    autoAdvanceDelay: 7000
+    autoAdvanceDelay: 16000 // 16 seconds
   },
   {
     content: [
@@ -112,7 +112,7 @@ const screens: Screen[] = [
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
-    autoAdvanceDelay: 7000
+    autoAdvanceDelay: 16000 // 16 seconds
   },
   {
     content: [""],
@@ -207,7 +207,7 @@ export default function Home() {
 
   if (isLastScreen) {
     return (
-      <div className="flex min-h-screen flex-col font-mono" style={{ backgroundColor: '#0a0a0a', color: '#b0b0b0' }}>
+      <div className="flex min-h-screen flex-col" style={{ backgroundColor: '#0a0a0a', color: '#b0b0b0', fontFamily: 'Arial, sans-serif' }}>
         <div className="border-b px-6 py-4" style={{ borderColor: '#4a4a4a', backgroundColor: '#1a1a1a' }}>
           <div className="flex items-center justify-between">
             <div className="text-lg" style={{ color: '#b0b0b0' }}>
@@ -237,12 +237,11 @@ export default function Home() {
 
   return (
     <div
-      className="flex min-h-screen flex-col font-mono transition-opacity duration-1000"
+      className="flex min-h-screen flex-col"
       style={{
         backgroundColor: '#0a0a0a',
         color: '#b0b0b0',
-        opacity: fadeOut ? 0 : 1,
-        transition: `opacity ${FADE_DURATION}ms linear`
+        fontFamily: 'Arial, sans-serif'
       }}
     >
       <div className="border-b px-6 py-4" style={{ borderColor: '#4a4a4a', backgroundColor: '#1a1a1a' }}>
@@ -267,7 +266,13 @@ export default function Home() {
         <div className="max-w-4xl w-full">
           <div className="border-2 shadow-lg" style={{ backgroundColor: '#1a1a1a', borderColor: '#4a4a4a' }}>
             <div className="p-12">
-              <div className="space-y-6">
+              <div 
+                className="space-y-6"
+                style={{
+                  opacity: fadeOut ? 0 : 1,
+                  transition: `opacity ${FADE_DURATION}ms linear`
+                }}
+              >
                 {contentArray.map((line, idx) => (
                   <div 
                     key={idx}
@@ -275,7 +280,7 @@ export default function Home() {
                       line === "" ? "h-8" : ""
                     }`}
                     style={{
-                      fontFamily: 'monospace',
+                      fontFamily: 'Arial, sans-serif',
                       letterSpacing: '0.01em',
                       lineHeight: '1.8',
                       color: '#ffffff'
@@ -294,9 +299,9 @@ export default function Home() {
         <button
           onClick={handleAcknowledgment}
           disabled={acknowledged}
-          className="fixed bottom-6 right-6 py-3 px-6 text-base font-mono uppercase tracking-wider border-2 transition-all duration-200"
+          className="fixed bottom-6 right-6 py-3 px-6 text-base uppercase tracking-wider border-2 transition-all duration-200"
           style={{
-            fontFamily: 'monospace',
+            fontFamily: 'Arial, sans-serif',
             letterSpacing: '0.05em',
             fontWeight: 'bold',
             backgroundColor: acknowledged ? '#2a2a2a' : '#3a3a3a',
