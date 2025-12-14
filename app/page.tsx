@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 const FADE_DURATION = 1000;
+const HOLD_DURATION = 2000;
+const LINE_REVEAL_DELAY = 800;
 
 type Screen = {
   content: string | string[];
@@ -141,8 +143,125 @@ export default function Home() {
   const [administrationStartTime, setAdministrationStartTime] = useState<Date | null>(null);
   const [adCountdown, setAdCountdown] = useState(30);
   const [showCannotSkip, setShowCannotSkip] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const [visibleLines, setVisibleLines] = useState<number[]>([]);
+  const [holdProgress, setHoldProgress] = useState(0);
+  const [isHolding, setIsHolding] = useState(false);
+  const [adFlash, setAdFlash] = useState(false);
+  const [ambienceIntensity, setAmbienceIntensity] = useState(0);
   const serenexAudioRef = useRef<HTMLAudioElement>(null);
   const zephyrilAudioRef = useRef<HTMLAudioElement>(null);
+  const ambienceGainRef = useRef<GainNode | null>(null);
+  const ambienceOscRef = useRef<OscillatorNode | null>(null);
+  const ambienceNoiseRef = useRef<AudioBufferSourceNode | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const holdIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const reducedMotion = useRef(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    reducedMotion.current = mediaQuery.matches;
+    const handleChange = (e: MediaQueryListEvent) => {
+      reducedMotion.current = e.matches;
+    };
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  const initAmbience = useCallback(() => {
+    if (audioContextRef.current) return;
+    
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContextRef.current = ctx;
+      
+      const gainNode = ctx.createGain();
+      gainNode.gain.value = 0;
+      gainNode.connect(ctx.destination);
+      ambienceGainRef.current = gainNode;
+      
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = 40;
+      osc.connect(gainNode);
+      osc.start();
+      ambienceOscRef.current = osc;
+      
+      const bufferSize = ctx.sampleRate * 2;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      noise.loop = true;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 200;
+      noise.connect(filter);
+      filter.connect(gainNode);
+      noise.start();
+      ambienceNoiseRef.current = noise;
+    } catch (e) {
+      console.log('Web Audio not available:', e);
+    }
+  }, []);
+
+  const updateAmbience = useCallback((intensity: number, isAd: boolean) => {
+    if (!ambienceGainRef.current || reducedMotion.current) return;
+    
+    const targetGain = isAd ? 0 : Math.min(0.15, intensity * 0.15);
+    const currentGain = ambienceGainRef.current.gain.value;
+    const diff = targetGain - currentGain;
+    
+    if (Math.abs(diff) > 0.001) {
+      ambienceGainRef.current.gain.linearRampToValueAtTime(
+        targetGain,
+        audioContextRef.current!.currentTime + (isAd ? 0.1 : 0.5)
+      );
+    }
+    
+    if (ambienceOscRef.current && !isAd) {
+      const pulseRate = 60 - (intensity * 50);
+      const baseFreq = 40 - (intensity * 10);
+      const time = audioContextRef.current!.currentTime;
+      ambienceOscRef.current.frequency.setValueAtTime(baseFreq, time);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      if (!audioEnabled) {
+        initAmbience();
+        setAudioEnabled(true);
+        document.removeEventListener('click', handleUserInteraction);
+        document.removeEventListener('touchstart', handleUserInteraction);
+        document.removeEventListener('keydown', handleUserInteraction);
+      }
+    };
+
+    if (!audioEnabled) {
+      document.addEventListener('click', handleUserInteraction);
+      document.addEventListener('touchstart', handleUserInteraction);
+      document.addEventListener('keydown', handleUserInteraction);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+      document.removeEventListener('keydown', handleUserInteraction);
+    };
+  }, [audioEnabled, initAmbience]);
+
+  useEffect(() => {
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(console.error);
+      }
+    };
+  }, []);
 
   const currentScreen = screens[currentIndex];
   const isLastScreen = currentIndex >= screens.length - 1;
@@ -162,6 +281,20 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    setVisibleLines([]);
+    if (!currentScreen.isAd && currentScreen.content) {
+      const contentArray = Array.isArray(currentScreen.content) 
+        ? currentScreen.content 
+        : [currentScreen.content];
+      contentArray.forEach((_, idx) => {
+        setTimeout(() => {
+          setVisibleLines(prev => [...prev, idx]);
+        }, idx * LINE_REVEAL_DELAY);
+      });
+    }
+  }, [currentIndex, currentScreen.isAd, currentScreen.content]);
+
+  useEffect(() => {
     if (currentScreen.isAd && adCountdown > 0) {
       const timer = setInterval(() => {
         setAdCountdown((prev) => {
@@ -179,28 +312,95 @@ export default function Home() {
 
   useEffect(() => {
     if (currentScreen.isAd) {
+      setAdFlash(true);
+      setTimeout(() => setAdFlash(false), 200);
+      updateAmbience(0, true);
+    } else {
+      const intensity = Math.min(1, currentIndex / screens.length);
+      setAmbienceIntensity(intensity);
+      updateAmbience(intensity, false);
+    }
+  }, [currentIndex, currentScreen.isAd, updateAmbience]);
+
+  useEffect(() => {
+    if (currentScreen.isAd) {
       setAdCountdown(30);
       setShowCannotSkip(false);
       
-      // Small delay to ensure audio elements are mounted
-      const playAudio = setTimeout(() => {
-        // Play the appropriate audio based on adId
-        if (currentScreen.adId === 1 && serenexAudioRef.current) {
-          serenexAudioRef.current.currentTime = 0;
-          serenexAudioRef.current.volume = 1.0;
-          serenexAudioRef.current.play().catch((error) => {
-            console.error('Error playing Serenex audio:', error);
-          });
-        } else if (currentScreen.adId === 2 && zephyrilAudioRef.current) {
-          zephyrilAudioRef.current.currentTime = 0;
-          zephyrilAudioRef.current.volume = 1.0;
-          zephyrilAudioRef.current.play().catch((error) => {
-            console.error('Error playing Zephyril audio:', error);
-          });
+      const playAudio = async () => {
+        // Wait a bit for audio elements to be ready
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        try {
+          if (currentScreen.adId === 1 && serenexAudioRef.current) {
+            const audio = serenexAudioRef.current;
+            audio.currentTime = 0;
+            audio.volume = 1.0;
+            
+            // Load the audio first
+            audio.load();
+            
+            // Wait for canplay event
+            await new Promise((resolve) => {
+              const handleCanPlay = () => {
+                audio.removeEventListener('canplay', handleCanPlay);
+                resolve(null);
+              };
+              audio.addEventListener('canplay', handleCanPlay);
+              
+              // Fallback timeout
+              setTimeout(() => {
+                audio.removeEventListener('canplay', handleCanPlay);
+                resolve(null);
+              }, 1000);
+            });
+            
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+              await playPromise;
+              console.log('Serenex audio playing');
+            }
+          } else if (currentScreen.adId === 2 && zephyrilAudioRef.current) {
+            const audio = zephyrilAudioRef.current;
+            audio.currentTime = 0;
+            audio.volume = 1.0;
+            
+            // Load the audio first
+            audio.load();
+            
+            // Wait for canplay event
+            await new Promise((resolve) => {
+              const handleCanPlay = () => {
+                audio.removeEventListener('canplay', handleCanPlay);
+                resolve(null);
+              };
+              audio.addEventListener('canplay', handleCanPlay);
+              
+              // Fallback timeout
+              setTimeout(() => {
+                audio.removeEventListener('canplay', handleCanPlay);
+                resolve(null);
+              }, 1000);
+            });
+            
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+              await playPromise;
+              console.log('Zephyril audio playing');
+            }
+          }
+        } catch (error) {
+          console.error('Error playing audio:', error);
+          // Try to play anyway - user interaction might have happened
+          if (currentScreen.adId === 1 && serenexAudioRef.current) {
+            serenexAudioRef.current.play().catch(console.error);
+          } else if (currentScreen.adId === 2 && zephyrilAudioRef.current) {
+            zephyrilAudioRef.current.play().catch(console.error);
+          }
         }
-      }, 100);
-
-      return () => clearTimeout(playAudio);
+      };
+      
+      playAudio();
     } else {
       // Pause all audio when not on ad screen
       if (serenexAudioRef.current) {
@@ -246,17 +446,55 @@ export default function Home() {
     return dose;
   };
 
-  const handleAcknowledgment = () => {
-    setAcknowledged(true);
-    setTimeout(() => {
-      setFadeOut(true);
-      setTimeout(() => {
-        setCurrentIndex(idx => idx + 1);
-        setFadeOut(false);
-        setAcknowledged(false);
-      }, FADE_DURATION);
-    }, 500);
+  const handleHoldStart = () => {
+    if (acknowledged) return;
+    setIsHolding(true);
+    setHoldProgress(0);
+    
+    const startTime = Date.now();
+    holdIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(100, (elapsed / HOLD_DURATION) * 100);
+      setHoldProgress(progress);
+      
+      if (progress >= 100) {
+        if (holdIntervalRef.current) {
+          clearInterval(holdIntervalRef.current);
+          holdIntervalRef.current = null;
+        }
+        setAcknowledged(true);
+        setIsHolding(false);
+        setTimeout(() => {
+          setFadeOut(true);
+          setTimeout(() => {
+            setCurrentIndex(idx => idx + 1);
+            setFadeOut(false);
+            setAcknowledged(false);
+            setHoldProgress(0);
+          }, FADE_DURATION);
+        }, 500);
+      }
+    }, 16);
   };
+
+  const handleHoldEnd = () => {
+    if (holdIntervalRef.current) {
+      clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+    setIsHolding(false);
+    if (!acknowledged) {
+      setHoldProgress(0);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (holdIntervalRef.current) {
+        clearInterval(holdIntervalRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (currentScreen.autoAdvance && !currentScreen.requiresAcknowledgment && !fadeOut) {
@@ -310,14 +548,39 @@ export default function Home() {
         className="flex min-h-screen flex-col items-center justify-center relative"
         style={{
           backgroundColor: '#0a0a0a',
-          fontFamily: 'Arial, sans-serif'
+          fontFamily: 'Arial, sans-serif',
+          overflow: 'hidden'
         }}
       >
+        <audio 
+          ref={serenexAudioRef} 
+          src="/ad_1_serenex.mp3" 
+          preload="auto"
+          style={{ display: 'none' }}
+        />
+        <audio 
+          ref={zephyrilAudioRef} 
+          src="/ad_zephyril.mp3" 
+          preload="auto"
+          style={{ display: 'none' }}
+        />
+        {adFlash && (
+          <div
+            className="absolute inset-0 z-50 pointer-events-none"
+            style={{
+              backgroundColor: '#ffffff',
+              opacity: adFlash ? 1 : 0,
+              transition: 'opacity 0.1s ease-out',
+              animation: adFlash ? 'flash 0.2s ease-out' : 'none'
+            }}
+          />
+        )}
         <div 
           className="absolute inset-0 flex items-center justify-center"
           style={{
             opacity: fadeOut ? 0 : 1,
-            transition: `opacity ${FADE_DURATION}ms linear`
+            transform: adFlash ? 'scale(1.02)' : 'scale(1)',
+            transition: adFlash ? 'transform 0.15s ease-out, opacity 0.15s ease-out' : `opacity ${FADE_DURATION}ms linear`
           }}
         >
           <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4 overflow-hidden relative" style={{ backgroundColor: '#ffffff' }}>
@@ -426,6 +689,8 @@ export default function Home() {
         preload="auto"
         style={{ display: 'none' }}
         onError={(e) => console.error('Serenex audio error:', e)}
+        onLoadedData={() => console.log('Serenex audio loaded')}
+        onLoadStart={() => console.log('Serenex audio loading started')}
       />
       <audio 
         ref={zephyrilAudioRef} 
@@ -433,13 +698,12 @@ export default function Home() {
         preload="auto"
         style={{ display: 'none' }}
         onError={(e) => console.error('Zephyril audio error:', e)}
+        onLoadedData={() => console.log('Zephyril audio loaded')}
+        onLoadStart={() => console.log('Zephyril audio loading started')}
       />
       <div className="border-b px-6 py-4" style={{ borderColor: '#4a4a4a', backgroundColor: '#1a1a1a' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <div className="text-lg" style={{ color: '#b0b0b0' }}>
-              STATUS: <span className="font-bold" style={{ color: '#ffffff' }}>{getStatusText()}</span>
-            </div>
             {isAdministering && (
               <div className="text-lg" style={{ color: '#b0b0b0' }}>
                 ELAPSED: <span style={{ color: '#ffffff' }}>{getElapsedTime()}</span>
@@ -452,8 +716,26 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-12 py-16">
-        <div className="max-w-4xl w-full">
+      <div className="flex-1 flex items-center justify-center px-12 py-16 relative">
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 70%, rgba(0,0,0,0.8) 100%)`,
+            opacity: 0.6 + (ambienceIntensity * 0.3),
+            transition: 'opacity 1s ease'
+          }}
+        />
+        {!reducedMotion.current && (
+          <div 
+            className="absolute inset-0 pointer-events-none opacity-20"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+              mixBlendMode: 'overlay',
+              animation: 'grain 8s steps(10) infinite'
+            }}
+          />
+        )}
+        <div className="max-w-4xl w-full relative z-10">
           <div className="border-2 shadow-lg" style={{ backgroundColor: '#1a1a1a', borderColor: '#4a4a4a' }}>
             <div className="p-12">
               <div 
@@ -473,7 +755,10 @@ export default function Home() {
                       fontFamily: 'Arial, sans-serif',
                       letterSpacing: '0.01em',
                       lineHeight: '1.8',
-                      color: '#ffffff'
+                      color: '#ffffff',
+                      opacity: visibleLines.includes(idx) ? 1 : 0,
+                      transform: visibleLines.includes(idx) ? 'translateY(0)' : 'translateY(10px)',
+                      transition: 'opacity 0.6s ease, transform 0.6s ease'
                     }}
                   >
                     {line}
@@ -486,45 +771,70 @@ export default function Home() {
       </div>
 
       {currentScreen.requiresAcknowledgment && (
-        <button
-          onClick={handleAcknowledgment}
-          disabled={acknowledged}
-          className="fixed bottom-6 right-6 py-3 px-6 text-base uppercase tracking-wider border-2 transition-all duration-200"
-          style={{
-            fontFamily: 'Arial, sans-serif',
-            letterSpacing: '0.05em',
-            fontWeight: 'bold',
-            backgroundColor: acknowledged ? '#2a2a2a' : '#3a3a3a',
-            color: acknowledged ? '#6a6a6a' : '#ffffff',
-            borderColor: acknowledged ? '#4a4a4a' : '#6a6a6a',
-            cursor: acknowledged ? 'not-allowed' : 'pointer',
-            zIndex: 1000
-          }}
-          onMouseEnter={(e) => {
-            if (!acknowledged) {
-              e.currentTarget.style.backgroundColor = '#4a4a4a';
-              e.currentTarget.style.borderColor = '#6a6a6a';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!acknowledged) {
-              e.currentTarget.style.backgroundColor = '#3a3a3a';
-              e.currentTarget.style.borderColor = '#6a6a6a';
-            }
-          }}
-          onMouseDown={(e) => {
-            if (!acknowledged) {
-              e.currentTarget.style.backgroundColor = '#5a5a5a';
-            }
-          }}
-          onMouseUp={(e) => {
-            if (!acknowledged) {
-              e.currentTarget.style.backgroundColor = '#4a4a4a';
-            }
-          }}
-        >
-          {acknowledged ? 'ACKNOWLEDGED' : 'I Acknowledge That I Am Going To Die'}
-        </button>
+        <div className="fixed bottom-6 right-6 flex flex-col items-end gap-2" style={{ zIndex: 1000 }}>
+          {!acknowledged && (
+            <div 
+              className="text-sm uppercase tracking-wider px-4 py-2 rounded"
+              style={{
+                backgroundColor: '#2a2a2a',
+                color: '#ffffff',
+                border: '1px solid #4a4a4a',
+                fontFamily: 'Arial, sans-serif',
+                fontWeight: 'bold',
+                letterSpacing: '0.1em',
+                animation: !isHolding ? 'pulse 2s ease-in-out infinite' : 'none'
+              }}
+            >
+              HOLD TO ACKNOWLEDGE
+            </div>
+          )}
+          <button
+            onMouseDown={handleHoldStart}
+            onMouseUp={handleHoldEnd}
+            onTouchStart={handleHoldStart}
+            onTouchEnd={handleHoldEnd}
+            disabled={acknowledged}
+            className="py-3 px-6 text-base uppercase tracking-wider border-2 transition-all duration-200 relative overflow-hidden"
+            style={{
+              fontFamily: 'Arial, sans-serif',
+              letterSpacing: '0.05em',
+              fontWeight: 'bold',
+              backgroundColor: acknowledged ? '#2a2a2a' : '#3a3a3a',
+              color: acknowledged ? '#6a6a6a' : '#ffffff',
+              borderColor: acknowledged ? '#4a4a4a' : '#6a6a6a',
+              cursor: acknowledged ? 'not-allowed' : 'pointer',
+              transform: isHolding && !reducedMotion.current ? `scale(${1 + Math.sin(Date.now() / 50) * 0.02})` : 'scale(1)',
+              transition: isHolding ? 'transform 0.05s linear' : 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              if (!acknowledged) {
+                e.currentTarget.style.backgroundColor = '#4a4a4a';
+                e.currentTarget.style.borderColor = '#6a6a6a';
+              }
+            }}
+            onMouseLeave={(e) => {
+              handleHoldEnd();
+              if (!acknowledged && !isHolding) {
+                e.currentTarget.style.backgroundColor = '#3a3a3a';
+                e.currentTarget.style.borderColor = '#6a6a6a';
+              }
+            }}
+          >
+            <div
+              className="absolute inset-0 bg-white opacity-20"
+              style={{
+                width: `${holdProgress}%`,
+                transition: holdProgress > 0 ? 'width 0.1s linear' : 'none'
+              }}
+            />
+            <span className="relative z-10">
+              {acknowledged ? 'ACKNOWLEDGED' : 'I Acknowledge That I Am Going To Die'}
+            </span>
+            {!acknowledged && (
+              <div className="absolute -bottom-1 left-0 right-0 h-1 bg-red-600" style={{ width: `${holdProgress}%` }} />
+            )}
+          </button>
+        </div>
       )}
     </div>
   );
