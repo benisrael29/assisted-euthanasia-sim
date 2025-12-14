@@ -240,6 +240,12 @@ export default function Home() {
         document.removeEventListener('click', handleUserInteraction);
         document.removeEventListener('touchstart', handleUserInteraction);
         document.removeEventListener('keydown', handleUserInteraction);
+        // Start ambience immediately after initialization
+        if (currentIndex === 0 && !screens[0].isAd) {
+          const intensity = 0.1;
+          setAmbienceIntensity(intensity);
+          updateAmbience(intensity, false);
+        }
       }
     };
 
@@ -254,7 +260,7 @@ export default function Home() {
       document.removeEventListener('touchstart', handleUserInteraction);
       document.removeEventListener('keydown', handleUserInteraction);
     };
-  }, [audioEnabled, initAmbience]);
+  }, [audioEnabled, initAmbience, currentIndex, updateAmbience]);
 
   useEffect(() => {
     return () => {
@@ -317,7 +323,7 @@ export default function Home() {
       setTimeout(() => setAdFlash(false), 200);
       updateAmbience(0, true);
     } else {
-      const intensity = Math.min(1, currentIndex / screens.length);
+      const intensity = Math.min(1, Math.max(0.1, currentIndex / screens.length));
       setAmbienceIntensity(intensity);
       updateAmbience(intensity, false);
     }
