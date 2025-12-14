@@ -71,7 +71,7 @@ const screens: Screen[] = [
     autoAdvanceDelay: 25000 // 25 seconds
   },
   {
-    content: [],
+    content: [""],
     isAd: true,
     adId: 1,
     requiresAcknowledgment: false,
@@ -103,7 +103,7 @@ const screens: Screen[] = [
     autoAdvanceDelay: 16000 // 16 seconds
   },
   {
-    content: [],
+    content: [""],
     isAd: true,
     adId: 2,
     requiresAcknowledgment: false,
@@ -132,7 +132,7 @@ const screens: Screen[] = [
     adId: 1,
     requiresAcknowledgment: false,
     autoAdvance: true,
-    autoAdvanceDelay: 15 // 30 seconds unskippable ad
+    autoAdvanceDelay: 30000 // 30 seconds unskippable ad
   },
   {
     content: [
@@ -156,7 +156,7 @@ export default function Home() {
   const [acknowledged, setAcknowledged] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [administrationStartTime, setAdministrationStartTime] = useState<Date | null>(null);
-  const [adCountdown, setAdCountdown] = useState(30);
+  const [adCountdown, setAdCountdown] = useState(0);
   const [showCannotSkip, setShowCannotSkip] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [visibleLines, setVisibleLines] = useState<number[]>([]);
@@ -190,7 +190,11 @@ export default function Home() {
     }
     
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) {
+        throw new Error('Web Audio API not supported');
+      }
+      const ctx = new AudioContextClass();
       audioContextRef.current = ctx;
       
       // Resume if suspended (browser autoplay policy)
@@ -324,7 +328,7 @@ export default function Home() {
   }, [currentIndex, currentScreen.isAd, currentScreen.content]);
 
   useEffect(() => {
-    if (currentScreen.isAd && adCountdown > 0) {
+    if (currentScreen.isAd && currentScreen.autoAdvanceDelay && adCountdown > 0) {
       const timer = setInterval(() => {
         setAdCountdown((prev) => {
           if (prev <= 1) {
@@ -334,10 +338,8 @@ export default function Home() {
         });
       }, 1000);
       return () => clearInterval(timer);
-    } else if (currentScreen.isAd && adCountdown === 0) {
-      setAdCountdown(30);
     }
-  }, [currentScreen.isAd, adCountdown]);
+  }, [currentScreen.isAd, currentScreen.autoAdvanceDelay, adCountdown]);
 
   useEffect(() => {
     if (currentScreen.isAd) {
@@ -360,7 +362,8 @@ export default function Home() {
 
   useEffect(() => {
     if (currentScreen.isAd) {
-      setAdCountdown(30);
+      const delaySeconds = currentScreen.autoAdvanceDelay ? Math.floor(currentScreen.autoAdvanceDelay / 1000) : 30;
+      setAdCountdown(delaySeconds);
       setShowCannotSkip(false);
       
       const playAudio = async () => {
@@ -555,18 +558,6 @@ export default function Home() {
           height: '100vh'
         }}
       >
-        <audio 
-          ref={serenexAudioRef} 
-          src="/ad_serenex.mp3" 
-          preload="auto"
-          style={{ display: 'none' }}
-        />
-        <audio 
-          ref={zephyrilAudioRef} 
-          src="/ad_zephyril.mp3" 
-          preload="auto"
-          style={{ display: 'none' }}
-        />
         {adFlash && (
           <div
             className="absolute inset-0 z-50 pointer-events-none"
@@ -693,18 +684,12 @@ export default function Home() {
         src="/ad_serenex.mp3" 
         preload="auto"
         style={{ display: 'none' }}
-        onError={(e) => console.error('Serenex audio error:', e)}
-        onLoadedData={() => console.log('Serenex audio loaded')}
-        onLoadStart={() => console.log('Serenex audio loading started')}
       />
       <audio 
         ref={zephyrilAudioRef} 
         src="/ad_zephyril.mp3" 
         preload="auto"
         style={{ display: 'none' }}
-        onError={(e) => console.error('Zephyril audio error:', e)}
-        onLoadedData={() => console.log('Zephyril audio loaded')}
-        onLoadStart={() => console.log('Zephyril audio loading started')}
       />
       <div className="border-b px-6 py-4" style={{ borderColor: '#4a4a4a', backgroundColor: '#1a1a1a' }}>
         <div className="flex items-center justify-between">
