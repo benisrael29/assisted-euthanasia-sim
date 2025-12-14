@@ -122,7 +122,7 @@ const screens: Screen[] = [
   },
   {
     content: [
-      "Procedure complete."
+      "Procedure complete. Goodbye."
     ],
     requiresAcknowledgment: false,
     autoAdvance: true,
@@ -130,6 +130,12 @@ const screens: Screen[] = [
   },
   {
     content: [""],
+    requiresAcknowledgment: false,
+    autoAdvance: true,
+    autoAdvanceDelay: 5000 // 5 seconds
+  },
+   {
+    content: ["This was created by Ben. Opinions are my own."],
     requiresAcknowledgment: false,
     autoAdvance: false
   }
