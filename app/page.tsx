@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const FADE_DURATION = 1000;
 
@@ -33,25 +33,19 @@ const screens: Screen[] = [
     autoAdvanceDelay: 15000
   },
   {
-    content: "An infusion pump will administer 2000mg of Nembutal over 5 mins.",
+    content: "An infusion pump will administer 2000mg of Nembutal over 5 mins. You may experience a slight bitter taste in your mouth as the drug is administered.",
     requiresAcknowledgment: false,
     autoAdvance: true,
     autoAdvanceDelay: 8000
   },
   {
-    content: "You may experience a slight bitter taste in your mouth as the drug is administered.",
+    content: "Once started, the process is irreversible. You will die.",
     requiresAcknowledgment: false,
     autoAdvance: true,
     autoAdvanceDelay: 6000
   },
   {
-    content: "once started, the process is irreversible.",
-    requiresAcknowledgment: false,
-    autoAdvance: true,
-    autoAdvanceDelay: 6000
-  },
-  {
-    content: "You acknowledge that this procedure will kill you.",
+    content: "I acknowledge that this procedure will kill me.",
     requiresAcknowledgment: true,
     autoAdvance: false
   },
@@ -147,6 +141,8 @@ export default function Home() {
   const [administrationStartTime, setAdministrationStartTime] = useState<Date | null>(null);
   const [adCountdown, setAdCountdown] = useState(30);
   const [showCannotSkip, setShowCannotSkip] = useState(false);
+  const serenexAudioRef = useRef<HTMLAudioElement>(null);
+  const zephyrilAudioRef = useRef<HTMLAudioElement>(null);
 
   const currentScreen = screens[currentIndex];
   const isLastScreen = currentIndex >= screens.length - 1;
@@ -185,8 +181,38 @@ export default function Home() {
     if (currentScreen.isAd) {
       setAdCountdown(30);
       setShowCannotSkip(false);
+      
+      // Small delay to ensure audio elements are mounted
+      const playAudio = setTimeout(() => {
+        // Play the appropriate audio based on adId
+        if (currentScreen.adId === 1 && serenexAudioRef.current) {
+          serenexAudioRef.current.currentTime = 0;
+          serenexAudioRef.current.volume = 1.0;
+          serenexAudioRef.current.play().catch((error) => {
+            console.error('Error playing Serenex audio:', error);
+          });
+        } else if (currentScreen.adId === 2 && zephyrilAudioRef.current) {
+          zephyrilAudioRef.current.currentTime = 0;
+          zephyrilAudioRef.current.volume = 1.0;
+          zephyrilAudioRef.current.play().catch((error) => {
+            console.error('Error playing Zephyril audio:', error);
+          });
+        }
+      }, 100);
+
+      return () => clearTimeout(playAudio);
+    } else {
+      // Pause all audio when not on ad screen
+      if (serenexAudioRef.current) {
+        serenexAudioRef.current.pause();
+        serenexAudioRef.current.currentTime = 0;
+      }
+      if (zephyrilAudioRef.current) {
+        zephyrilAudioRef.current.pause();
+        zephyrilAudioRef.current.currentTime = 0;
+      }
     }
-  }, [currentIndex]);
+  }, [currentIndex, currentScreen.isAd, currentScreen.adId]);
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', { 
@@ -393,6 +419,21 @@ export default function Home() {
         fontFamily: 'Arial, sans-serif'
       }}
     >
+      {/* Hidden audio elements always rendered for proper ref access */}
+      <audio 
+        ref={serenexAudioRef} 
+        src="/ad_1_serenex.mp3" 
+        preload="auto"
+        style={{ display: 'none' }}
+        onError={(e) => console.error('Serenex audio error:', e)}
+      />
+      <audio 
+        ref={zephyrilAudioRef} 
+        src="/ad_zephyril.mp3" 
+        preload="auto"
+        style={{ display: 'none' }}
+        onError={(e) => console.error('Zephyril audio error:', e)}
+      />
       <div className="border-b px-6 py-4" style={{ borderColor: '#4a4a4a', backgroundColor: '#1a1a1a' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-8">
