@@ -516,17 +516,17 @@ export default function Home() {
 
   if (isLastScreen) {
     return (
-      <div className="flex flex-col" style={{ backgroundColor: '#0a0a0a', color: '#b0b0b0', fontFamily: 'Arial, sans-serif', height: '100vh', overflow: 'hidden' }}>
-        <div className="border-b px-6 py-4" style={{ borderColor: '#4a4a4a', backgroundColor: '#1a1a1a' }}>
-          <div className="flex items-center justify-between">
+      <div className="flex flex-col min-h-[100dvh]" style={{ backgroundColor: '#0a0a0a', color: '#b0b0b0', fontFamily: 'Arial, sans-serif', overflow: 'hidden' }}>
+        <div className="border-b px-4 sm:px-6 py-3 sm:py-4" style={{ borderColor: '#4a4a4a', backgroundColor: '#1a1a1a' }}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="text-lg" style={{ color: '#b0b0b0' }}>
               {formatDate(currentTime)} | {formatTime(currentTime)}
             </div>
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-center" style={{ height: 'calc(100vh - 73px)' }}>
+        <div className="flex-1 flex items-center justify-center px-4" style={{ minHeight: 'calc(100dvh - 64px)' }}>
           <div className="text-center">
-            <div className="text-7xl font-bold mb-4" style={{ color: '#ffffff' }}>PROCEDURE COMPLETE</div>
+            <div className="text-3xl sm:text-7xl font-bold mb-4" style={{ color: '#ffffff' }}>PROCEDURE COMPLETE</div>
           <div className="mt-8 text-base text-gray-500" style={{ color: '#aaa', fontSize: '0.85rem' }}>
             This was created by Ben. Opinions are my own.
           </div>
@@ -555,7 +555,7 @@ export default function Home() {
           backgroundColor: '#0a0a0a',
           fontFamily: 'Arial, sans-serif',
           overflow: 'hidden',
-          height: '100vh'
+          minHeight: '100dvh'
         }}
       >
         {adFlash && (
@@ -580,7 +580,7 @@ export default function Home() {
           <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4 overflow-hidden relative" style={{ backgroundColor: '#ffffff' }}>
             <button
               onClick={() => setShowCannotSkip(true)}
-              className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-full transition-colors"
+              className="absolute top-2 right-2 w-11 h-11 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-full transition-colors"
               style={{ zIndex: 10 }}
             >
               <span className="text-xl font-bold">×</span>
@@ -607,12 +607,12 @@ export default function Home() {
               </div>
               <div className="text-white text-sm font-bold">{adCountdown}</div>
             </div>
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
               <div className="mb-4">
                 {currentScreen.adId === 1 ? (
                   <>
-                    <h2 className="text-3xl font-bold mb-2" style={{ color: '#1a1a1a' }}>Serenex - Find Your Peace</h2>
-                    <p className="text-lg mb-4" style={{ color: '#4a4a4a' }}>
+                    <h2 className="text-xl sm:text-3xl font-bold mb-2" style={{ color: '#1a1a1a' }}>Serenex - Find Your Peace</h2>
+                    <p className="text-base sm:text-lg mb-4" style={{ color: '#4a4a4a' }}>
                       Don't let depression control your life. Serenex helps millions find relief from symptoms of depression.
                     </p>
                     <div className="bg-blue-50 p-4 rounded mb-4" style={{ backgroundColor: '#e3f2fd' }}>
@@ -625,7 +625,7 @@ export default function Home() {
                       </p>
                     </div>
                     <button 
-                      className="bg-blue-600 text-white px-6 py-3 rounded font-semibold hover:bg-blue-700 transition-colors"
+                      className="bg-blue-600 text-white px-5 sm:px-6 py-3 rounded font-semibold hover:bg-blue-700 transition-colors w-full sm:w-auto"
                       style={{ backgroundColor: '#1976d2' }}
                       onClick={(e) => e.preventDefault()}
                     >
@@ -634,8 +634,8 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    <h2 className="text-3xl font-bold mb-2" style={{ color: '#1a1a1a' }}>Zephyril - Reclaim Your Life</h2>
-                    <p className="text-lg mb-4" style={{ color: '#4a4a4a' }}>
+                    <h2 className="text-xl sm:text-3xl font-bold mb-2" style={{ color: '#1a1a1a' }}>Zephyril - Reclaim Your Life</h2>
+                    <p className="text-base sm:text-lg mb-4" style={{ color: '#4a4a4a' }}>
                       Break free from the weight of depression. Zephyril offers a new path to emotional wellness and mental clarity.
                     </p>
                     <div className="bg-purple-50 p-4 rounded mb-4" style={{ backgroundColor: '#f3e5f5' }}>
@@ -648,7 +648,7 @@ export default function Home() {
                       </p>
                     </div>
                     <button 
-                      className="bg-purple-600 text-white px-6 py-3 rounded font-semibold hover:bg-purple-700 transition-colors"
+                      className="bg-purple-600 text-white px-5 sm:px-6 py-3 rounded font-semibold hover:bg-purple-700 transition-colors w-full sm:w-auto"
                       style={{ backgroundColor: '#7b1fa2' }}
                       onClick={(e) => e.preventDefault()}
                     >
@@ -669,12 +669,11 @@ export default function Home() {
 
   return (
     <div
-      className="flex flex-col"
+      className="flex flex-col min-h-[100dvh]"
       style={{
         backgroundColor: '#0a0a0a',
         color: '#b0b0b0',
         fontFamily: 'Arial, sans-serif',
-        height: '100vh',
         overflow: 'hidden'
       }}
     >
@@ -691,22 +690,22 @@ export default function Home() {
         preload="auto"
         style={{ display: 'none' }}
       />
-      <div className="border-b px-6 py-4" style={{ borderColor: '#4a4a4a', backgroundColor: '#1a1a1a' }}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-8">
+      <div className="border-b px-4 sm:px-6 py-3 sm:py-4" style={{ borderColor: '#4a4a4a', backgroundColor: '#1a1a1a' }}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex items-center gap-4 sm:gap-8">
             {isAdministering && (
-              <div className="text-lg" style={{ color: '#b0b0b0' }}>
+              <div className="text-base sm:text-lg" style={{ color: '#b0b0b0' }}>
                 ELAPSED: <span style={{ color: '#ffffff' }}>{getElapsedTime()}</span>
               </div>
             )}
           </div>
-          <div className="text-lg" style={{ color: '#b0b0b0' }}>
+          <div className="text-base sm:text-lg" style={{ color: '#b0b0b0' }}>
             {formatDate(currentTime)} | {formatTime(currentTime)}
           </div>
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-12 py-16 relative" style={{ height: 'calc(100vh - 73px)', overflow: 'hidden' }}>
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-12 py-6 sm:py-16 relative" style={{ minHeight: 'calc(100dvh - 64px)', overflow: 'hidden' }}>
         <div 
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -726,20 +725,19 @@ export default function Home() {
           />
         )}
         <div className="max-w-4xl w-full relative z-10">
-          <div className="border-2 shadow-lg" style={{ backgroundColor: '#1a1a1a', borderColor: '#4a4a4a', height: '500px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div className="p-12 flex-1 flex items-center" style={{ overflow: 'hidden' }}>
+          <div className="border-2 shadow-lg flex flex-col overflow-hidden" style={{ backgroundColor: '#1a1a1a', borderColor: '#4a4a4a', maxHeight: 'min(500px, calc(100dvh - 160px))' }}>
+            <div className="p-5 sm:p-12 flex-1 flex items-start sm:items-center" style={{ overflow: 'hidden' }}>
               <div 
-                className="space-y-6 w-full"
+                className="space-y-4 sm:space-y-6 w-full overflow-y-auto"
                 style={{
                   opacity: fadeOut ? 0 : 1,
                   transition: `opacity ${FADE_DURATION}ms linear`,
-                  overflow: 'hidden'
                 }}
               >
                 {contentArray.map((line, idx) => (
                   <div 
                     key={idx}
-                    className={`text-5xl leading-relaxed text-left ${
+                    className={`text-2xl sm:text-5xl leading-relaxed text-left ${
                       line === "" ? "h-8" : ""
                     }`}
                     style={{
@@ -769,11 +767,11 @@ export default function Home() {
       </div>
 
       {currentScreen.requiresAcknowledgment && (
-        <div className="fixed bottom-6 right-6 flex flex-col items-end gap-2" style={{ zIndex: 1000 }}>
+        <div className="fixed left-4 right-4 sm:left-auto sm:right-6 bottom-[calc(env(safe-area-inset-bottom)+1rem)] flex flex-col items-end gap-2" style={{ zIndex: 1000 }}>
           <button
             onClick={handleAcknowledge}
             disabled={acknowledged}
-            className="py-3 px-6 text-base uppercase tracking-wider border-2 transition-all duration-200"
+            className="py-4 sm:py-3 px-5 sm:px-6 text-sm sm:text-base uppercase tracking-wider border-2 transition-all duration-200 w-full sm:w-auto"
             style={{
               fontFamily: 'Arial, sans-serif',
               letterSpacing: '0.05em',
