@@ -236,10 +236,23 @@ export default function Home() {
     }
   }, []);
 
-  const updateAmbience = useCallback((intensity: number, isAd: boolean) => {
-    if (!ambienceGainRef.current || reducedMotion.current) return;
+  const updateAmbience = useCallback(async (intensity: number, isAd: boolean) => {
+    if (reducedMotion.current) return;
     
-    const targetGain = isAd ? 0 : Math.min(0.15, intensity * 0.15);
+    // Ensure audio context is initialized
+    if (!audioContextRef.current) {
+      await initAmbience();
+    }
+    
+    // Ensure audio context is resumed
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      await audioContextRef.current.resume();
+    }
+    
+    if (!ambienceGainRef.current) return;
+    
+    // Increased gain for better audibility (was 0.15 max, now 0.4 max)
+    const targetGain = isAd ? 0 : Math.min(0.8, intensity * 0.8);
     const currentGain = ambienceGainRef.current.gain.value;
     const diff = targetGain - currentGain;
     
@@ -256,7 +269,7 @@ export default function Home() {
       const time = audioContextRef.current!.currentTime;
       ambienceOscRef.current.frequency.setValueAtTime(baseFreq, time);
     }
-  }, []);
+  }, [initAmbience]);
 
   useEffect(() => {
     const handleUserInteraction = async () => {
@@ -270,7 +283,12 @@ export default function Home() {
         if (currentIndex === 0 && !screens[0].isAd) {
           const intensity = 0.2;
           setAmbienceIntensity(intensity);
-          updateAmbience(intensity, false);
+          await updateAmbience(intensity, false);
+        } else {
+          // Update ambience for current screen
+          const intensity = Math.min(1, Math.max(0.2, currentIndex / screens.length));
+          setAmbienceIntensity(intensity);
+          await updateAmbience(intensity, false);
         }
       }
     };
@@ -342,22 +360,19 @@ export default function Home() {
   }, [currentScreen.isAd, currentScreen.autoAdvanceDelay, adCountdown]);
 
   useEffect(() => {
-    if (currentScreen.isAd) {
-      setAdFlash(true);
-      setTimeout(() => setAdFlash(false), 200);
-      updateAmbience(0, true);
-    } else {
-      const intensity = Math.min(1, Math.max(0.2, currentIndex / screens.length));
-      setAmbienceIntensity(intensity);
-      // Ensure audio context is resumed before updating
-      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-        audioContextRef.current.resume().then(() => {
-          updateAmbience(intensity, false);
-        });
+    const updateAmbienceForScreen = async () => {
+      if (currentScreen.isAd) {
+        setAdFlash(true);
+        setTimeout(() => setAdFlash(false), 200);
+        await updateAmbience(0, true);
       } else {
-        updateAmbience(intensity, false);
+        const intensity = Math.min(1, Math.max(0.2, currentIndex / screens.length));
+        setAmbienceIntensity(intensity);
+        await updateAmbience(intensity, false);
       }
-    }
+    };
+    
+    updateAmbienceForScreen();
   }, [currentIndex, currentScreen.isAd, updateAmbience]);
 
   useEffect(() => {
@@ -367,75 +382,74 @@ export default function Home() {
       setShowCannotSkip(false);
       
       const playAudio = async () => {
+        // Ensure audio context is initialized
+        if (!audioEnabled) {
+          await initAmbience();
+          setAudioEnabled(true);
+        }
+        
         // Wait a bit for audio elements to be ready
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         try {
-          if (currentScreen.adId === 1 && serenexAudioRef.current) {
-            const audio = serenexAudioRef.current;
-            audio.currentTime = 0;
-            audio.volume = 1.0;
-            
-            // Load the audio first
-            audio.load();
-            
-            // Wait for canplay event
-            await new Promise((resolve) => {
-              const handleCanPlay = () => {
-                audio.removeEventListener('canplay', handleCanPlay);
-                resolve(null);
-              };
-              audio.addEventListener('canplay', handleCanPlay);
-              
-              // Fallback timeout
-              setTimeout(() => {
-                audio.removeEventListener('canplay', handleCanPlay);
-                resolve(null);
-              }, 1000);
-            });
-            
+          const audio = currentScreen.adId === 1 
+            ? serenexAudioRef.current 
+            : currentScreen.adId === 2 
+            ? zephyrilAudioRef.current 
+            : null;
+          
+          if (!audio) return;
+          
+          // Reset audio
+          audio.currentTime = 0;
+          audio.volume = 1.0;
+          
+          // Check if audio is already loaded
+          if (audio.readyState >= 2) {
+            // Audio is loaded, play immediately
             const playPromise = audio.play();
             if (playPromise !== undefined) {
               await playPromise;
-              console.log('Serenex audio playing');
             }
-          } else if (currentScreen.adId === 2 && zephyrilAudioRef.current) {
-            const audio = zephyrilAudioRef.current;
-            audio.currentTime = 0;
-            audio.volume = 1.0;
-            
-            // Load the audio first
-            audio.load();
-            
-            // Wait for canplay event
-            await new Promise((resolve) => {
+          } else {
+            // Wait for audio to load
+            await new Promise((resolve, reject) => {
               const handleCanPlay = () => {
                 audio.removeEventListener('canplay', handleCanPlay);
+                audio.removeEventListener('error', handleError);
                 resolve(null);
               };
+              
+              const handleError = (e: Event) => {
+                audio.removeEventListener('canplay', handleCanPlay);
+                audio.removeEventListener('error', handleError);
+                reject(e);
+              };
+              
               audio.addEventListener('canplay', handleCanPlay);
+              audio.addEventListener('error', handleError);
+              
+              // Load the audio if not already loading
+              if (audio.readyState === 0) {
+                audio.load();
+              }
               
               // Fallback timeout
               setTimeout(() => {
                 audio.removeEventListener('canplay', handleCanPlay);
+                audio.removeEventListener('error', handleError);
+                // Try to play even if canplay didn't fire
                 resolve(null);
-              }, 1000);
+              }, 2000);
             });
             
             const playPromise = audio.play();
             if (playPromise !== undefined) {
               await playPromise;
-              console.log('Zephyril audio playing');
             }
           }
         } catch (error) {
           console.error('Error playing audio:', error);
-          // Try to play anyway - user interaction might have happened
-          if (currentScreen.adId === 1 && serenexAudioRef.current) {
-            serenexAudioRef.current.play().catch(console.error);
-          } else if (currentScreen.adId === 2 && zephyrilAudioRef.current) {
-            zephyrilAudioRef.current.play().catch(console.error);
-          }
         }
       };
       
@@ -451,7 +465,7 @@ export default function Home() {
         zephyrilAudioRef.current.currentTime = 0;
       }
     }
-  }, [currentIndex, currentScreen.isAd, currentScreen.adId]);
+  }, [currentIndex, currentScreen.isAd, currentScreen.adId, audioEnabled, initAmbience]);
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', { 
@@ -547,17 +561,31 @@ export default function Home() {
     return 'IN PROGRESS';
   };
 
-  if (currentScreen.isAd) {
-    return (
-      <div
-        className="flex flex-col items-center justify-center relative"
-        style={{
-          backgroundColor: '#0a0a0a',
-          fontFamily: 'Arial, sans-serif',
-          overflow: 'hidden',
-          minHeight: '100dvh'
-        }}
-      >
+  return (
+    <>
+      {/* Hidden audio elements always rendered for proper ref access */}
+      <audio 
+        ref={serenexAudioRef} 
+        src="/ad_serenex.mp3" 
+        preload="auto"
+        style={{ display: 'none' }}
+      />
+      <audio 
+        ref={zephyrilAudioRef} 
+        src="/ad_zephyril.mp3" 
+        preload="auto"
+        style={{ display: 'none' }}
+      />
+      {currentScreen.isAd ? (
+        <div
+          className="flex flex-col items-center justify-center relative"
+          style={{
+            backgroundColor: '#0a0a0a',
+            fontFamily: 'Arial, sans-serif',
+            overflow: 'hidden',
+            minHeight: '100dvh'
+          }}
+        >
         {adFlash && (
           <div
             className="absolute inset-0 z-50 pointer-events-none"
@@ -664,32 +692,16 @@ export default function Home() {
           Mandatory content allocation. Skip function disabled.
         </div>
       </div>
-    );
-  }
-
-  return (
-    <div
-      className="flex flex-col min-h-[100dvh]"
-      style={{
-        backgroundColor: '#0a0a0a',
-        color: '#b0b0b0',
-        fontFamily: 'Arial, sans-serif',
-        overflow: 'hidden'
-      }}
-    >
-      {/* Hidden audio elements always rendered for proper ref access */}
-      <audio 
-        ref={serenexAudioRef} 
-        src="/ad_serenex.mp3" 
-        preload="auto"
-        style={{ display: 'none' }}
-      />
-      <audio 
-        ref={zephyrilAudioRef} 
-        src="/ad_zephyril.mp3" 
-        preload="auto"
-        style={{ display: 'none' }}
-      />
+      ) : (
+        <div
+          className="flex flex-col min-h-[100dvh]"
+          style={{
+            backgroundColor: '#0a0a0a',
+            color: '#b0b0b0',
+            fontFamily: 'Arial, sans-serif',
+            overflow: 'hidden'
+          }}
+        >
       <div className="border-b px-4 sm:px-6 py-3 sm:py-4" style={{ borderColor: '#4a4a4a', backgroundColor: '#1a1a1a' }}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center gap-4 sm:gap-8">
@@ -798,6 +810,8 @@ export default function Home() {
           </button>
         </div>
       )}
-    </div>
+        </div>
+      )}
+    </>
   );
 }
