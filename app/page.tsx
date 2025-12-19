@@ -251,7 +251,6 @@ export default function Home() {
     
     if (!ambienceGainRef.current) return;
     
-    // Increased gain for better audibility (was 0.15 max, now 0.4 max)
     const targetGain = isAd ? 0 : Math.min(0.8, intensity * 0.8);
     const currentGain = ambienceGainRef.current.gain.value;
     const diff = targetGain - currentGain;
